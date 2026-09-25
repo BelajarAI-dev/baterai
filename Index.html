@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistem Informasi TPQ Al-Muawanah</title>
+  
+  <!-- CSS Library -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+  
+  <style>
+    body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .login-card { max-width: 450px; margin: 40px auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .navbar-brand { font-weight: bold; color: #198754 !important; }
+    
+    .sidebar-menu { 
+      background: #ffffff; 
+      min-height: calc(100vh - 56px); 
+      border-right: 1px solid #dee2e6; 
+      transition: all 0.3s ease;
+    }
+    .sidebar-hidden { display: none !important; }
+    .nav-link { cursor: pointer; }
+    .nav-link.active { background-color: #198754 !important; color: white !important; font-weight: 600; border-radius: 6px; }
+    .card-dashboard { border: none; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+    .child-selector-box { background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 8px; }
+    .weekend-row { background-color: #fff3cd !important; }
+
+    .matrix-table { font-size: 0.8rem; }
+    .matrix-table th, .matrix-table td { text-align: center; vertical-align: middle; padding: 4px 2px !important; }
+    .matrix-table th.sticky-col, .matrix-table td.sticky-col { position: sticky; left: 0; background-color: #fff; z-index: 1; text-align: left; padding-left: 8px !important; }
+    .matrix-symbol-check { color: #198754; font-weight: bold; font-size: 1rem; }
+    .matrix-symbol-izin { color: #0dcaf0; font-weight: bold; }
+    .matrix-symbol-sakit { color: #ffc107; font-weight: bold; }
+    .matrix-symbol-alpa { color: #dc3545; font-weight: bold; }
+
+    #printableReportArea { display: none; }
+
+    @media print {
+      body { background-color: #ffffff !important; color: #000000 !important; font-size: 10pt; }
+      #appSection { display: none !important; }
+      #printableReportArea { display: block !important; }
+
+      .print-header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid #000; padding-bottom: 8px; }
+      .print-header h4 { font-weight: bold; margin-bottom: 2px; text-transform: uppercase; font-size: 14pt; }
+      .print-header p { margin-bottom: 0; font-size: 10pt; }
+      .print-table { width: 100% !important; border-collapse: collapse !important; margin-bottom: 15px; }
+      .print-table th, .print-table td { border: 1px solid #000 !important; padding: 3px 4px !important; font-size: 8.5pt !important; }
+      .print-table th { background-color: #f2f2f2 !important; -webkit-print-color-adjust: exact; text-align: center; }
+      .signature-section { margin-top: 30px; width: 100%; page-break-inside: avoid; }
+    }
+
+    @page { size: A4 portrait; margin: 12mm; }
+
+    @media print {
+      body.landscape-mode { font-size: 8pt !important; }
+      body.landscape-mode .print-table th, body.landscape-mode .print-table td { padding: 2px 1px !important; font-size: 7.5pt !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HALAMAN LOGIN -->
+  <div id="loginSection">
+    <div class="card login-card p-4">
+      <div class="text-center mb-3">
+        <i class="bi bi-book-half text-success display-4"></i>
+        <h4 class="mt-2 fw-bold text-success">TPQ AL-MUAWANAH</h4>
+        <p class="text-muted small">Sistem Informasi Absensi & Monitoring (Firebase)</p>
+      </div>
+
+      <div id="loginAlert"></div>
+      
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="mb-3">
+          <label class="form-label">Username / Email</label>
+          <input type="text" id="username" class="form-control" required placeholder="Masukkan username/email">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Password</label>
+          <input type="password" id="password" class="form-control" required placeholder="Masukkan password">
+        </div>
+        <button type="submit" id="btnLogin" class="btn btn-success w-100 py-2">Masuk</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- APLIKASI UTAMA -->
+  <div id="appSection" style="display: none;">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom px-3">
+      <button class="btn btn-outline-success btn-sm me-3" id="sidebarToggleBtn" onclick="toggleSidebar()">
+        <i class="bi bi-list fs-5"></i>
+      </button>
+      <a class="navbar-brand" href="javascript:void(0)"><i class="bi bi-journal-check"></i> TPQ AL-MUAWANAH</a>
+      <div class="ms-auto d-flex align-items-center">
+        <span class="me-3 badge bg-light text-dark p-2 border" id="userBadge">Role: -</span>
+        <button class="btn btn-outline-danger btn-sm" onclick="logout('Pengguna keluar.')"><i class="bi bi-box-arrow-right"></i> Keluar</button>
+      </div>
+    </nav>
+
+    <div class="container-fluid">
+      <div class="row">
+        <!-- SIDEBAR -->
+        <div class="col-md-2 p-3 sidebar-menu" id="sidebarContainer">
+          <h6 class="text-uppercase text-muted fw-bold small px-2">Menu Navigasi</h6>
+          <ul class="nav nav-pills flex-column" id="sidebarNav">
+            <li class="nav-item">
+              <a class="nav-link active mb-1" id="menu-dashboard" onclick="switchTab('dashboard')"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a>
+            </li>
+            <div id="dynamicMenu"></div>
+          </ul>
+        </div>
+
+        <!-- CONTENT -->
+        <div class="col-md-10 p-4" id="mainContentArea">
+          <div id="childSelectorContainer" class="child-selector-box p-3 mb-3 d-none">
+            <div class="row align-items-center">
+              <div class="col-md-4">
+                <label class="fw-bold text-success mb-0"><i class="bi bi-person-bounding-box me-2"></i>Pilih Santri Aktif:</label>
+              </div>
+              <div class="col-md-8">
+                <select id="selectedChildDropdown" class="form-select border-success" onchange="onChildSelectionChange(this.value)"></select>
+              </div>
+            </div>
+          </div>
+
+          <div id="alertBox"></div>
+          <div id="mainContent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="printableReportArea"></div>
+
+  <!-- Firebase SDK Modules -->
+  <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "firebase/app";
+      import { getAnalytics } from "firebase/analytics";
+      // TODO: Add SDKs for Firebase products that you want to use
+      // https://firebase.google.com/docs/web/setup#available-libraries
+
+      // Your web app's Firebase configuration
+      // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+      const firebaseConfig = {
+        apiKey: "AIzaSyBm560355ego5BrjjpIFQXHOEWRbNeRo5o",
+        authDomain: "almuawanah-3b4a3.firebaseapp.com",
+        databaseURL: "https://almuawanah-3b4a3-default-rtdb.firebaseio.com",
+        projectId: "almuawanah-3b4a3",
+        storageBucket: "almuawanah-3b4a3.firebasestorage.app",
+        messagingSenderId: "170719829089",
+        appId: "1:170719829089:web:0e556b38be81cb0b84de20",
+        measurementId: "G-8KT9K9EP52"
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+
+    // Global State App
+    window.db = db;
+    window.currentUser = null;
+    window.selectedChildId = null;
+    window.activeTab = 'dashboard';
+
+    // -------------------------------------------------------------
+    // 2. FUNGSI LOGIN & AUTENTIKASI FIRESTORE
+    // -------------------------------------------------------------
+    window.handleLogin = async function(e) {
+      e.preventDefault();
+      const u = document.getElementById('username').value.trim();
+      const p = document.getElementById('password').value.trim();
+      const btn = document.getElementById('btnLogin');
+      btn.disabled = true;
+      btn.innerText = "Memproses...";
+
+      try {
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("username", "==", u), where("password", "==", p));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          document.getElementById('loginAlert').innerHTML = `<div class="alert alert-danger p-2 small">Username atau password salah.</div>`;
+          btn.disabled = false;
+          btn.innerText = "Masuk";
+          return;
+        }
+
+        let userData = null;
+        querySnapshot.forEach((docSnap) => {
+          userData = { id_user: docSnap.id, ...docSnap.data() };
+        });
+
+        if (userData.role === 'walisiswa') {
+          userData.list_siswa = await getSiswaByWaliId(userData.id_user);
+        }
+
+        window.currentUser = userData;
+        localStorage.setItem('tpq_user', JSON.stringify(userData));
+        
+        if (userData.role === 'walisiswa' && userData.list_siswa && userData.list_siswa.length > 0) {
+          window.selectedChildId = userData.list_siswa[0].id_siswa;
+        }
+
+        btn.disabled = false;
+        btn.innerText = "Masuk";
+        initApp();
+      } catch (err) {
+        console.error(err);
+        document.getElementById('loginAlert').innerHTML = `<div class="alert alert-danger p-2 small">Terjadi kesalahan sistem/koneksi Firebase.</div>`;
+        btn.disabled = false;
+        btn.innerText = "Masuk";
+      }
+    };
+
+    window.logout = function(msg) {
+      window.currentUser = null;
+      window.selectedChildId = null;
+      localStorage.removeItem('tpq_user');
+      document.getElementById('appSection').style.display = 'none';
+      document.getElementById('loginSection').style.display = 'block';
+      if(msg) document.getElementById('loginAlert').innerHTML = `<div class="alert alert-warning p-2 small">${msg}</div>`;
+    };
+
+    async function getSiswaByWaliId(idWali) {
+      const siswaRef = collection(db, "siswa");
+      const q = query(siswaRef, where("id_wali", "==", idWali), where("status_siswa", "==", "Aktif"));
+      const snap = await getDocs(q);
+      let list = [];
+      snap.forEach(d => {
+        list.push({ id_siswa: d.id, ...d.data() });
+      });
+      return list;
+    }
+
+    // -------------------------------------------------------------
+    // 3. INISIALISASI & NAVIGATION
+    // -------------------------------------------------------------
+    function initApp() {
+      document.getElementById('loginSection').style.display = 'none';
+      document.getElementById('appSection').style.display = 'block';
+      document.getElementById('userBadge').innerText = `${window.currentUser.nama} (${window.currentUser.role.toUpperCase()})`;
+
+      renderChildSelector();
+      buildNavigationMenu();
+      switchTab('dashboard');
+    }
+
+    function renderChildSelector() {
+      const container = document.getElementById('childSelectorContainer');
+      const dropdown = document.getElementById('selectedChildDropdown');
+
+      if (window.currentUser.role === 'walisiswa') {
+        container.classList.remove('d-none');
+        if (window.currentUser.list_siswa && window.currentUser.list_siswa.length > 0) {
+          dropdown.innerHTML = window.currentUser.list_siswa.map(s => `
+            <option value="${s.id_siswa}" ${s.id_siswa === window.selectedChildId ? 'selected' : ''}>
+              ${s.nama_siswa} (NIS: ${s.nis})
+            </option>
+          `).join('');
+        } else {
+          dropdown.innerHTML = `<option value="">-- Tidak ada santri aktif --</option>`;
+        }
+      } else {
+        container.classList.add('d-none');
+      }
+    }
+
+    window.onChildSelectionChange = function(val) {
+      window.selectedChildId = val;
+      switchTab(window.activeTab);
+    };
+
+    function buildNavigationMenu() {
+      const container = document.getElementById('dynamicMenu');
+      const role = window.currentUser.role;
+      let html = '';
+
+      if (role === 'walisiswa' || role === 'superadmin') {
+        html += `<li class="nav-item"><a class="nav-link mb-1" id="menu-waliAbsensi" onclick="switchTab('waliAbsensi')"><i class="bi bi-calendar-check me-2"></i> Pengajuan Absensi</a></li>`;
+      }
+      if (role === 'guru' || role === 'superadmin') {
+        html += `
+          <li class="nav-item"><a class="nav-link mb-1" id="menu-guruAbsensi" onclick="switchTab('guruAbsensi')"><i class="bi bi-pen me-2"></i> Input Absensi</a></li>
+          <li class="nav-item"><a class="nav-link mb-1" id="menu-guruNilai" onclick="switchTab('guruNilai')"><i class="bi bi-journal-check me-2"></i> Kelola Nilai</a></li>
+        `;
+      }
+      if (role === 'admin' || role === 'superadmin') {
+        html += `<li class="nav-item"><a class="nav-link mb-1" id="menu-adminUsers" onclick="switchTab('adminUsers')"><i class="bi bi-people me-2"></i> Kelola User</a></li>`;
+      }
+      container.innerHTML = html;
+    }
+
+    window.switchTab = function(tabName) {
+      window.activeTab = tabName;
+      document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+      const activeEl = document.getElementById('menu-' + tabName);
+      if (activeEl) activeEl.classList.add('active');
+
+      if (tabName === 'dashboard') renderDashboard();
+      else if (tabName === 'waliAbsensi') renderWaliAbsensi();
+      else if (tabName === 'guruAbsensi') renderGuruAbsensi();
+      else if (tabName === 'guruNilai') renderGuruNilai();
+      else if (tabName === 'adminUsers') renderAdminUsers();
+    };
+
+    window.toggleSidebar = function() {
+      const sidebar = document.getElementById('sidebarContainer');
+      const main = document.getElementById('mainContentArea');
+      sidebar.classList.toggle('sidebar-hidden');
+      main.classList.toggle('col-md-12');
+      main.classList.toggle('col-md-10');
+    };
+
+    // -------------------------------------------------------------
+    // 4. RENDERING VIEW & OPERASI FIRESTORE (DATA REALTIME)
+    // -------------------------------------------------------------
+    async function renderDashboard() {
+      const main = document.getElementById('mainContent');
+      main.innerHTML = `<div class="card card-dashboard p-4"><h5>Selamat Datang, ${window.currentUser.nama}</h5><p class="text-muted">Role Anda: <strong>${window.currentUser.role}</strong></p></div>`;
+    }
+
+    function renderWaliAbsensi() {
+      const main = document.getElementById('mainContent');
+      main.innerHTML = `
+        <div class="card card-dashboard p-4">
+          <h5><i class="bi bi-calendar-plus text-success me-2"></i> Pengajuan Absensi Santri</h5>
+          <form onsubmit="submitPengajuan(event)">
+            <div class="mb-3">
+              <label class="form-label">Tanggal Halangan</label>
+              <input type="date" id="tglPengajuan" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Jenis</label>
+              <select id="jenisPengajuan" class="form-select">
+                <option value="Izin">Izin</option>
+                <option value="Sakit">Sakit</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Alasan</label>
+              <textarea id="alasanPengajuan" class="form-control" rows="3" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-success">Kirim Pengajuan</button>
+          </form>
+        </div>
+      `;
+    }
+
+    window.submitPengajuan = async function(e) {
+      e.preventDefault();
+      try {
+        await addDoc(collection(db, "pengajuan_absensi"), {
+          id_siswa: window.selectedChildId,
+          tanggal: document.getElementById('tglPengajuan').value,
+          jenis: document.getElementById('jenisPengajuan').value,
+          alasan: document.getElementById('alasanPengajuan').value,
+          status: 'Pending',
+          created_at: new Date()
+        });
+        alert('Pengajuan berhasil dikirim!');
+        switchTab('dashboard');
+      } catch (err) {
+        alert('Gagal mengirim pengajuan: ' + err.message);
+      }
+    };
+
+    async function renderGuruAbsensi() {
+      const main = document.getElementById('mainContent');
+      main.innerHTML = `<div class="spinner-border text-success"></div> Memuat data siswa...`;
+
+      const qSiswa = query(collection(db, "siswa"), where("id_kelas", "==", window.currentUser.id_kelas || ""));
+      const snap = await getDocs(qSiswa);
+
+      let rows = '';
+      snap.forEach(docSnap => {
+        const s = docSnap.data();
+        rows += `
+          <tr>
+            <td>${s.nama_siswa}</td>
+            <td>
+              <select class="form-select form-select-sm status-absen" data-id="${docSnap.id}">
+                <option value="Masuk">Masuk</option>
+                <option value="Izin">Izin</option>
+                <option value="Sakit">Sakit</option>
+                <option value="Alpa">Alpa</option>
+              </select>
+            </td>
+          </tr>
+        `;
+      });
+
+      main.innerHTML = `
+        <div class="card card-dashboard p-4">
+          <h5><i class="bi bi-pen text-success me-2"></i> Input Absensi Kelas</h5>
+          <div class="mb-3 w-25">
+            <label class="form-label">Tanggal</label>
+            <input type="date" id="tglAbsensiGuru" class="form-control" value="${new Date().toISOString().split('T')[0]}">
+          </div>
+          <table class="table table-bordered">
+            <thead><tr><th>Nama Santri</th><th>Status Kehadiran</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="2">Tidak ada santri di kelas ini</td></tr>'}</tbody>
+          </table>
+          <button class="btn btn-success" onclick="simpanAbsensiBulk()">Simpan Absensi</button>
+        </div>
+      `;
+    }
+
+    window.simpanAbsensiBulk = async function() {
+      const tgl = document.getElementById('tglAbsensiGuru').value;
+      const selects = document.querySelectorAll('.status-absen');
+
+      try {
+        for (let sel of selects) {
+          await addDoc(collection(db, "absensi"), {
+            id_siswa: sel.getAttribute('data-id'),
+            tanggal: tgl,
+            status: sel.value,
+            created_at: new Date()
+          });
+        }
+        alert('Absensi berhasil disimpan!');
+      } catch (err) {
+        alert('Gagal menyimpan: ' + err.message);
+      }
+    };
+
+    async function renderGuruNilai() {
+      document.getElementById('mainContent').innerHTML = `<div class="card card-dashboard p-4"><h5>Fitur Nilai Guru (Firestore Connected)</h5></div>`;
+    }
+
+    async function renderAdminUsers() {
+      const main = document.getElementById('mainContent');
+      main.innerHTML = `<div class="spinner-border text-success"></div> Memuat daftar user...`;
+
+      const snap = await getDocs(collection(db, "users"));
+      let rows = '';
+      snap.forEach(d => {
+        const u = d.data();
+        rows += `<tr><td>${u.username}</td><td>${u.nama}</td><td><span class="badge bg-primary">${u.role}</span></td></tr>`;
+      });
+
+      main.innerHTML = `
+        <div class="card card-dashboard p-4">
+          <h5><i class="bi bi-people text-success me-2"></i> Manajemen User</h5>
+          <table class="table table-bordered mt-3">
+            <thead><tr><th>Username</th><th>Nama</th><th>Role</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    // Auto restore session
+    const saved = localStorage.getItem('tpq_user');
+    if (saved) {
+      window.currentUser = JSON.parse(saved);
+      if(window.currentUser.list_siswa && window.currentUser.list_siswa.length > 0) {
+        window.selectedChildId = window.currentUser.list_siswa[0].id_siswa;
+      }
+      initApp();
+    }
+  </script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
